@@ -5,7 +5,7 @@
   "ModVersion": "1.0.0",
   "ModDescription": "Edit Persona 3 Reload's per-difficulty combat multipliers (damage, EXP, money, ailments) from the Reloaded config. Defaults to the game's stock values - change only what you want, with presets or full per-difficulty control.",
   "ModDll": "p3rpc.difficultyEditor.dll",
-  "ModIcon": "",
+  "ModIcon": "Preview.png",
   "ModR2RManagedDll32": "x86/p3rpc.difficultyEditor.dll",
   "ModR2RManagedDll64": "x64/p3rpc.difficultyEditor.dll",
   "ModNativeDll32": "",
