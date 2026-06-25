@@ -2,7 +2,7 @@
   "ModId": "p3rpc.difficultyEditor",
   "ModName": "P3R Custom Difficulty Editor",
   "ModAuthor": "Malurth",
-  "ModVersion": "1.0.0",
+  "ModVersion": "1.0.1",
   "ModDescription": "Edit Persona 3 Reload's per-difficulty combat multipliers (damage, EXP, money, ailments) from the Reloaded config. Defaults to the game's stock values - change only what you want, with presets or full per-difficulty control.",
   "ModDll": "p3rpc.difficultyEditor.dll",
   "ModIcon": "Preview.png",
@@ -21,6 +21,10 @@
       "RepositoryName": "p3rpc.difficultyEditor",
       "UseReleaseTag": true,
       "AssetFileName": "Mod.zip"
+    },
+    "GameBanana": {
+      "ItemType": "Mod",
+      "ItemId": 689020
     },
     "GitHubDependencies": {
       "IdToConfigMap": {
