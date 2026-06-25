@@ -16,6 +16,10 @@ on:
     branches: [ master, main ]
   workflow_dispatch:
 
+# Needed so the on-tag step can create a GitHub Release with the default GITHUB_TOKEN.
+permissions:
+  contents: write
+
 env:
   PUBLISH_COMMON_PATH: ./Publish/ToUpload/
   PUBLISH_GAMEBANANA_PATH: ./Publish/ToUpload/GameBanana
