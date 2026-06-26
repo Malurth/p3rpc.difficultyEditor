@@ -2,6 +2,7 @@
 
   <PropertyGroup>
     <TargetFramework>net9.0-windows7.0</TargetFramework>
+    <UseWPF>true</UseWPF>
     <AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
     <CopyLocalLockFileAssemblies>true</CopyLocalLockFileAssemblies>
     <LangVersion>12.0</LangVersion>
@@ -14,6 +15,12 @@
 
   <ItemGroup>
     <ReloadedLinkRoots Include="p3rpc.difficultyEditor" />
+  </ItemGroup>
+
+  <!-- UseWPF switches to the WindowsDesktop SDK, whose implicit-usings profile drops System.IO
+       (and System.Net.Http) that the unedited Template files rely on. Re-add System.IO. -->
+  <ItemGroup>
+    <Using Include="System.IO" />
   </ItemGroup>
 
   <Import Project="Reloaded.Trimming.targets" />

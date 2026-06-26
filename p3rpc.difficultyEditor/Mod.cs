@@ -2,7 +2,6 @@ using p3rpc.difficultyEditor.Configuration;
 using p3rpc.difficultyEditor.Template;
 using Reloaded.Mod.Interfaces;
 using System.Drawing;
-using System.Reflection;
 using UnrealEssentials.Interfaces;
 
 namespace p3rpc.difficultyEditor;
@@ -11,7 +10,7 @@ namespace p3rpc.difficultyEditor;
 /// Reads the configured per-difficulty multipliers, patches a copy of the game's
 /// DT_BtlDIfficultyParam data table, and feeds it to Unreal Essentials so the game
 /// loads our values instead of the stock ones. No game hooks required.
-/// (Presets are resolved in the Config class itself, inside the launcher; here we just read values.)
+/// (Presets are resolved in the config window inside the launcher; here we just read the baked values.)
 /// </summary>
 public class Mod : ModBase
 {
@@ -20,14 +19,8 @@ public class Mod : ModBase
     private readonly IModConfig _modConfig;
     private Config _configuration;
 
-    // Row order MUST match the row order inside the .uexp.
-    private static readonly string[] Rows = { "Peaceful", "Easy", "Normal", "Hard", "Merciless" };
-    private static readonly string[] Fields =
-    {
-        "DamageDealt", "DamageDealtWeak", "DamageDealtCrit",
-        "DamageTaken", "DamageTakenWeak", "DamageTakenCrit",
-        "Exp", "Money", "AilmentsOnYou", "AilmentsByYou",
-    };
+    private static readonly string[] Rows = Presets.Rows;
+    private static readonly string[] Fields = Presets.Fields;
 
     // Byte offset of each float value inside the (zen-format) DT_BtlDIfficultyParam.uasset.
     // Indexed [field][row]. Unreal Essentials wants zen/IoStore-format loose files, not legacy.
@@ -46,21 +39,7 @@ public class Mod : ModBase
     };
 
     // Stock value at each offset. Validates the bundled template before patching.
-    private static readonly double[][] Vanilla =
-    {
-        new[] { 1.6, 1.25, 1.0, 0.8, 0.6  }, // DamageDealt
-        new[] { 1.0, 1.0,  1.0, 1.0, 1.36 }, // DamageDealtWeak
-        new[] { 1.0, 1.0,  1.0, 1.0, 1.34 }, // DamageDealtCrit
-        new[] { 0.5, 0.5,  1.0, 1.3, 1.5  }, // DamageTaken
-        new[] { 1.0, 1.0,  1.0, 1.0, 1.36 }, // DamageTakenWeak
-        new[] { 1.0, 1.0,  1.0, 1.0, 1.34 }, // DamageTakenCrit
-        new[] { 1.5, 1.2,  1.0, 1.0, 1.0  }, // Exp
-        new[] { 1.5, 1.2,  1.0, 1.0, 1.0  }, // Money
-        new[] { 0.1, 0.5,  1.0, 1.0, 1.2  }, // AilmentsOnYou
-        new[] { 1.5, 1.2,  1.0, 1.0, 0.8  }, // AilmentsByYou
-    };
-
-    private static readonly PropertyInfo[][] Props = BuildPropMap();
+    private static readonly double[][] Vanilla = Presets.Vanilla;
 
     private const string VirtualSubPath = @"P3R\Content\Xrd777\Blueprints\Battle\Calculations";
     private const string AssetName = "DT_BtlDIfficultyParam";
@@ -77,27 +56,53 @@ public class Mod : ModBase
             Register(generated);
     }
 
-    private static PropertyInfo[][] BuildPropMap()
+    /// <summary>
+    /// Pure core of the bake: validate the template is the table we expect, then write each configured
+    /// multiplier (as a 32-bit float) into a copy of the bytes. Returns the patched copy, or null with a
+    /// reason. No file I/O — kept separate so it can be unit-tested against the real bundled asset.
+    /// </summary>
+    public static byte[]? TryPatch(byte[] template, IReadOnlyDictionary<string, double> values, out int changed, out string? error)
     {
-        var map = new PropertyInfo[Fields.Length][];
+        changed = 0;
+        error = null;
+
         for (int f = 0; f < Fields.Length; f++)
-        {
-            map[f] = new PropertyInfo[Rows.Length];
             for (int r = 0; r < Rows.Length; r++)
-                map[f][r] = typeof(Config).GetProperty($"{Rows[r]}_{Fields[f]}")!;
-        }
-        return map;
+            {
+                int off = Offsets[f][r];
+                if (off + 4 > template.Length)
+                {
+                    error = "Offset out of range; wrong template.";
+                    return null;
+                }
+                float cur = BitConverter.ToSingle(template, off);
+                if (Math.Abs(cur - (float)Vanilla[f][r]) > 0.01f)
+                {
+                    error = $"Template validation failed at {Fields[f]}/{Rows[r]} (got {cur}, expected {Vanilla[f][r]}). Game version may differ.";
+                    return null;
+                }
+            }
+
+        var bytes = (byte[])template.Clone();
+        for (int f = 0; f < Fields.Length; f++)
+            for (int r = 0; r < Rows.Length; r++)
+            {
+                float v = (float)values[Presets.Key(f, r)];
+                if (Math.Abs(v - (float)Vanilla[f][r]) > 0.0001f) changed++;
+                BitConverter.GetBytes(v).CopyTo(bytes, Offsets[f][r]);
+            }
+        return bytes;
     }
 
-    /// <summary>Reads the effective [field][row] multiplier table straight from the config fields.</summary>
-    private float[][] BuildTable()
+    /// <summary>Reads the [field][row] float table back out of a (patched or stock) asset. For tests/logging.</summary>
+    public static float[][] ReadTable(byte[] bytes)
     {
         var t = new float[Fields.Length][];
         for (int f = 0; f < Fields.Length; f++)
         {
             t[f] = new float[Rows.Length];
             for (int r = 0; r < Rows.Length; r++)
-                t[f][r] = (float)(double)Props[f][r].GetValue(_configuration)!;
+                t[f][r] = BitConverter.ToSingle(bytes, Offsets[f][r]);
         }
         return t;
     }
@@ -115,36 +120,13 @@ public class Mod : ModBase
                 return null;
             }
 
-            var bytes = File.ReadAllBytes(srcUasset);
-
-            // Validate the template is the table we think it is, before touching anything.
-            for (int f = 0; f < Fields.Length; f++)
-                for (int r = 0; r < Rows.Length; r++)
-                {
-                    int off = Offsets[f][r];
-                    if (off + 4 > bytes.Length)
-                    {
-                        _logger.WriteLine($"[{_modConfig.ModId}] Offset out of range; wrong template. Aborting (game keeps stock values).", Color.Red);
-                        return null;
-                    }
-                    float cur = BitConverter.ToSingle(bytes, off);
-                    if (Math.Abs(cur - (float)Vanilla[f][r]) > 0.01f)
-                    {
-                        _logger.WriteLine($"[{_modConfig.ModId}] Template validation failed at {Fields[f]}/{Rows[r]} (got {cur}, expected {Vanilla[f][r]}). Game version may differ. Aborting (game keeps stock values).", Color.Red);
-                        return null;
-                    }
-                }
-
-            // Patch.
-            var table = BuildTable();
-            int changed = 0;
-            for (int f = 0; f < Fields.Length; f++)
-                for (int r = 0; r < Rows.Length; r++)
-                {
-                    float v = table[f][r];
-                    if (Math.Abs(v - (float)Vanilla[f][r]) > 0.0001f) changed++;
-                    BitConverter.GetBytes(v).CopyTo(bytes, Offsets[f][r]);
-                }
+            var template = File.ReadAllBytes(srcUasset);
+            var bytes = TryPatch(template, _configuration.GetValues(), out int changed, out string? error);
+            if (bytes == null)
+            {
+                _logger.WriteLine($"[{_modConfig.ModId}] {error} Aborting (game keeps stock values).", Color.Red);
+                return null;
+            }
 
             var outDir = Path.Combine(modDir, "Generated", VirtualSubPath);
             Directory.CreateDirectory(outDir);
@@ -152,7 +134,7 @@ public class Mod : ModBase
 
             _logger.WriteLine($"[{_modConfig.ModId}] Baked difficulty table ({changed} values changed from stock).", Color.LightGreen);
             if (_configuration.LogToConsole)
-                LogTable(table);
+                LogTable(ReadTable(bytes));
 
             return Path.Combine(modDir, "Generated");
         }

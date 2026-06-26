@@ -1,22 +1,24 @@
 # P3R Custom Difficulty Editor
 
-A [Reloaded II](https://github.com/Reloaded-Project/Reloaded-II) mod for **Persona 3 Reload** that lets you edit the game's per-difficulty combat multipliers right from the mod's config UI — no file editing, no external tools.
+A [Reloaded II](https://github.com/Reloaded-Project/Reloaded-II) mod for **Persona 3 Reload** that lets you edit the game's per-difficulty combat multipliers in a dedicated editor window — no file editing, no external tools.
 
 Every difficulty (Peaceful, Easy, Normal, Hard, Merciless) exposes the full set of multipliers the game actually uses, so you can fine-tune the balance or build your own custom difficulty.
 
 ## Features
 
+- **A real editor window** (opened from **Configure**) with a grid of every difficulty × every multiplier.
 - **Per-difficulty control** of all 10 multipliers:
   - Damage you **deal** / **take** — each with separate **Weakness** and **Critical** variants
   - **EXP** gained and item **sell value**
   - **Ailment** rates (landing on you / inflicted by you)
-- **Presets** that fill in the values for you:
+- **Built-in presets** that fill in the values for you:
   - `Vanilla` — the game's stock values
   - `HarderEasy` — a less-cushy Easy (you deal 1.15×, take 0.85×, resist ailments at 0.85×)
   - `Halfsies` — every difficulty pulled halfway toward Normal
   - `Bursty` — gives every difficulty Merciless's weakness (1.36×) and critical (1.34×) damage
-- **Live preset detection** — the dropdown shows whichever preset your current values match, or `Custom`.
-- **Hide weakness/crit settings** toggle to keep the list tidy (on by default).
+- **Your own presets** — save the current values as a named preset, then apply / overwrite / rename / delete it. Custom presets are stored in the config and persist across launches.
+- **Live match indicator** — shows whichever preset (built-in or yours) your current values match, or `Custom`.
+- **Hide weakness/crit rows** toggle to keep the grid tidy (on by default).
 - Everything defaults to vanilla, so the mod changes nothing until you edit it.
 
 ## Requirements
@@ -32,9 +34,9 @@ Every difficulty (Peaceful, Easy, Normal, Hard, Merciless) exposes the full set 
 
 ## Usage
 
-1. In Reloaded II, select the mod and open **Configure**.
-2. Choose a **Preset**, or edit individual difficulty values.
-3. **Relaunch the game** — changes are applied at startup.
+1. In Reloaded II, select the mod and open **Configure** — this opens the editor window.
+2. Apply a **preset**, edit individual values in the grid, and optionally **Save as new** to keep your own preset.
+3. Click **Save & Close**, then **relaunch the game** — changes are applied at startup.
 
 > Set the matching difficulty in-game for its values to take effect (e.g. Easy edits only affect Easy).
 
