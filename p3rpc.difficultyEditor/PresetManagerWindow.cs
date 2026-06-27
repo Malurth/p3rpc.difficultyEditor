@@ -101,10 +101,11 @@ internal sealed class PresetManagerWindow : Window
         Title = "P3R Custom Difficulty Editor";
         Background = Bg;
         Foreground = Text;
+        // Auto-size to content; no manual resizing (it only made dead space or cropped). The window still
+        // re-fits automatically when the weakness/crit rows are shown/hidden.
         SizeToContent = SizeToContent.WidthAndHeight;
         WindowStartupLocation = WindowStartupLocation.CenterScreen;
-        ResizeMode = ResizeMode.CanResize;
-        MinWidth = 480;
+        ResizeMode = ResizeMode.NoResize;
         SnapsToDevicePixels = true;
         UseLayoutRounding = true;
 
@@ -367,11 +368,23 @@ internal sealed class PresetManagerWindow : Window
     private bool NameTaken(string name, UserPreset? except = null) =>
         _userPresets.Any(u => u != except && string.Equals(u.Name, name, StringComparison.OrdinalIgnoreCase));
 
+    // Names that map to the protected options (Vanilla / the Custom sentinel) can't be used for a user preset.
+    private bool IsReservedName(string name) =>
+        string.Equals(name, "Vanilla", StringComparison.OrdinalIgnoreCase) ||
+        string.Equals(name, "Custom", StringComparison.OrdinalIgnoreCase) ||
+        string.Equals(name, _customOption.Name, StringComparison.OrdinalIgnoreCase);
+
     private void OnSaveAsNew(object? s, RoutedEventArgs e)
     {
         var name = PromptForName(this, "Save preset", "Name for this preset:", SuggestName());
         if (string.IsNullOrWhiteSpace(name)) return;
         name = name.Trim();
+
+        if (IsReservedName(name))
+        {
+            Notify("Reserved name", $"“{name}” is reserved and can't be overwritten. Please choose a different name.");
+            return;
+        }
 
         if (NameTaken(name))
         {
@@ -479,6 +492,36 @@ internal sealed class PresetManagerWindow : Window
         dlg.Content = panel;
         dlg.ShowDialog();
         return result;
+    }
+
+    private void Notify(string title, string message)
+    {
+        var dlg = new Window
+        {
+            Title = title,
+            SizeToContent = SizeToContent.WidthAndHeight,
+            WindowStartupLocation = WindowStartupLocation.CenterOwner,
+            Owner = this,
+            Background = Bg,
+            Foreground = Text,
+            ResizeMode = ResizeMode.NoResize,
+            ShowInTaskbar = false,
+            MinWidth = 300,
+        };
+
+        var panel = new StackPanel { Margin = new Thickness(16) };
+        panel.Children.Add(new TextBlock { Text = message, Foreground = Text, TextWrapping = TextWrapping.Wrap, MaxWidth = 360, Margin = new Thickness(0, 0, 0, 14) });
+
+        var ok = MakeButton("OK", (_, __) => dlg.DialogResult = true);
+        ok.IsDefault = true;
+        ok.IsCancel = true;
+        ok.Background = Accent;
+        ok.MinWidth = 72;
+        ok.HorizontalAlignment = HorizontalAlignment.Right;
+        panel.Children.Add(ok);
+
+        dlg.Content = panel;
+        dlg.ShowDialog();
     }
 
     private string? PromptForName(Window owner, string title, string prompt, string initial)

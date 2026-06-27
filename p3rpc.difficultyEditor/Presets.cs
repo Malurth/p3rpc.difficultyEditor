@@ -112,7 +112,9 @@ public static class Presets
         {
             t[f] = new double[Rows.Length];
             for (int r = 0; r < Rows.Length; r++)
-                t[f][r] = (Vanilla[f][r] + 1.0) / 2.0;
+                // Round so the computed value snaps to a clean double (e.g. (1.36+1)/2 -> 1.18,
+                // not 1.1800000000000002). Multipliers never need more than a few decimals.
+                t[f][r] = Math.Round((Vanilla[f][r] + 1.0) / 2.0, 6);
         }
         return t;
     }
